@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState, useRef } from "react";
 import { ArrowRight, BarChart3, FileText, LayoutDashboard, LogOut, Package, Plus, Search, ShoppingCart, Trash2, UserRound, Users, Camera } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart } from "recharts";
 import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { createCategory, createCustomer, createInvoice, createProduct, deleteCategory, deleteCustomer, deleteProduct, getAdminReports, getDashboardAnalytics, getAdvancedAnalytics, getAnalytics, getAdminStats, getPeriodAnalytics, compareAnalytics, getDashboardSummary, getComprehensiveDashboard, getAdminById, getCustomers, getCustomer, getCustomerStats, getProfile, listCategories, listInvoices, listAllInvoices, listProducts, updateCategory, updateProduct, updateProfile, type AdminProfile, type AdminStats, type Category, type Customer, type CustomerStats, type Invoice, type Product } from "@/lib/adminApi";
+import { createCategory, createCustomer, createInvoice, createProduct, deleteCategory, deleteCustomer, deleteProduct, getAdminReports, getDashboardAnalytics, getAdvancedAnalytics, getAnalytics, getAdminStats, getPeriodAnalytics, compareAnalytics, getDashboardSummary, getComprehensiveDashboard, getAdminById, getCustomers, getCustomer, getCustomerStats, getProfile, listCategories, listInvoices, listAllInvoices, listProducts, updateCategory, updateProduct, updateProfile, type AdminProfile, type AdminStats, type Category, type Customer, type CustomerStats, type Invoice, type Product, type PeriodAnalytics, type PeriodAnalyticsTopProduct, type PeriodAnalyticsPaymentMethod } from "@/lib/adminApi";
 import AdminLayout from "@/components/AdminLayout";
 
 const sections: Record<string, { title: string; eyebrow: string; description: string; icon: typeof Package }> = {
@@ -1661,7 +1661,520 @@ function CustomersContent() {
     </div>
   );
 }
-function AnalyticsContent() { const [stats, setStats] = useState<AdminStats | null>(null); const [profile, setProfile] = useState<AdminProfile | null>(null); const [dashboard, setDashboard] = useState<any>(null); const [reports, setReports] = useState<any[]>([]); const [advanced, setAdvanced] = useState<unknown>(null); const [comprehensive, setComprehensive] = useState<any>(null); const [startDate, setStartDate] = useState(() => sessionStorage.getItem("kasher.analytics.startDate") || "2024-01-01"); const [endDate, setEndDate] = useState(() => sessionStorage.getItem("kasher.analytics.endDate") || "2024-12-31"); const [compareStartDate, setCompareStartDate] = useState(() => sessionStorage.getItem("kasher.analytics.compareStartDate") || "2025-01-01"); const [compareEndDate, setCompareEndDate] = useState(() => sessionStorage.getItem("kasher.analytics.compareEndDate") || "2025-12-31"); const [loadingAdvanced, setLoadingAdvanced] = useState(false); const [error, setError] = useState(""); useEffect(() => { Promise.all([getAdminStats(), getDashboardAnalytics(), getAdminReports(), getProfile(), getComprehensiveDashboard("all")]).then(([s, d, r, p, full]) => { const dashboardData = (d as any)?.data || d; const reportsData = (r as any)?.data || r; setStats(s); setDashboard(dashboardData); setReports(Array.isArray(reportsData) ? reportsData : []); const profileData = (p as any)?.data?.admin || (p as any)?.data?.profile || (p as any)?.data || p; setProfile(profileData as AdminProfile); setComprehensive((full as any)?.data || full); }).catch((e) => setError(e instanceof Error ? e.message : "تعذر تحميل التحليلات")); }, []); useEffect(() => { sessionStorage.setItem("kasher.analytics.startDate", startDate); sessionStorage.setItem("kasher.analytics.endDate", endDate); sessionStorage.setItem("kasher.analytics.compareStartDate", compareStartDate); sessionStorage.setItem("kasher.analytics.compareEndDate", compareEndDate); }, [startDate, endDate, compareStartDate, compareEndDate]); const runAdvanced = async () => { if (!startDate || !endDate || startDate > endDate) { setError("اختر نطاقاً زمنياً صحيحاً"); return; } setError(""); setLoadingAdvanced(true); try { setAdvanced(await getAdvancedAnalytics(startDate, endDate)); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل التحليل المتقدم؛ تحقق من تفعيل endpoint في الباك إند"); } finally { setLoadingAdvanced(false); } }; const dashboardCards = [{ label: "إيراد اليوم", value: dashboard?.revenue?.daily, suffix: "ج.م" }, { label: "إيراد الشهر", value: dashboard?.revenue?.monthly, suffix: "ج.م" }, { label: "فواتير اليوم", value: dashboard?.invoices?.daily, suffix: "فاتورة" }, { label: "كمية المخزون", value: dashboard?.inventory?.totalQuantity, suffix: "قطعة" }, { label: "قيمة المخزون", value: dashboard?.inventory?.totalValue, suffix: "ج.م" }]; const statCards = [{ label: "إجمالي الفواتير", value: stats?.invoicesCount ?? stats?.totalInvoices, suffix: "فاتورة" }, { label: "الربح اليومي", value: stats?.todayProfit ?? stats?.dailyProfit, suffix: "ج.م" }, { label: "الربح الشهري", value: stats?.monthProfit ?? stats?.monthlyProfit, suffix: "ج.م" }, { label: "الربح السنوي", value: stats?.yearProfit ?? stats?.yearlyProfit, suffix: "ج.م" }]; const advancedData = ((advanced as any)?.data || advanced || {}) as any; const advancedRows = Array.isArray(advancedData) ? advancedData : []; const advancedCards = [{ key: "revenue", label: "الإيرادات", unit: "ج.م" }, { key: "products", label: "المنتجات", unit: "منتج" }, { key: "invoices", label: "الفواتير", unit: "فاتورة" }, { key: "customers", label: "العملاء", unit: "عميل" }]; return <div className="space-y-5">{error && <p className="rounded-xl bg-[#f9e7df] p-3 text-xs text-[#9b4c32]">{error}</p>}<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{statCards.map((card) => <div key={card.label} className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-5"><p className="text-xs text-[#999187]">{card.label}</p><p className="mt-3 font-display text-2xl font-bold">{card.value !== undefined && card.value !== null ? Number(card.value).toLocaleString("ar-SA") : "—"}</p><span className="mt-1 block text-[11px] text-[#b96f4a]">{card.suffix}</span></div>)}</div><div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6"><h2 className="font-display text-lg font-bold">تحليلات لوحة التحكم</h2><p className="mt-1 text-xs text-[#999187]">GET /api/admin/dashboard/analytics · revenue / products / invoices / customers / inventory</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{dashboardCards.map((card) => <div key={card.label} className="rounded-xl bg-[#faf7f1] p-4"><p className="text-xs text-[#999187]">{card.label}</p><p className="mt-2 font-display text-xl font-bold">{typeof card.value === "number" ? card.value.toLocaleString("ar-SA") : "—"}</p><span className="text-[10px] text-[#b96f4a]">{card.suffix}</span></div>)}</div></div><div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-xs font-bold text-[#b96f4a]">تحليل مخصص</p><h2 className="mt-1 font-display text-xl font-bold">التحليلات المتقدمة</h2><p className="mt-1 text-xs text-[#999187]">GET /api/admin/analytics/advanced?startDate=...&endDate=...</p></div><Button onClick={runAdvanced} disabled={loadingAdvanced} className="rounded-xl bg-[#172433]">{loadingAdvanced ? "جاري التحليل..." : "تطبيق الفلاتر"}</Button></div><div className="mt-5 grid gap-3 md:grid-cols-2"><label className="text-xs font-semibold text-[#6f625a]">من تاريخ<Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-2" /></label><label className="text-xs font-semibold text-[#6f625a]">إلى تاريخ<Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-2" /></label></div>{advanced !== null && <div className="mt-5 space-y-4"><div className="flex items-center justify-between"><h3 className="font-display text-base font-bold">نتيجة التقرير للفترة المحددة</h3><span className="rounded-full bg-[#e6f0e5] px-3 py-1 text-[11px] font-semibold text-[#5d805a]">بيانات فعلية</span></div>{advancedRows.length > 0 ? <div className="overflow-x-auto rounded-xl border border-[#eee8df]"><table className="w-full min-w-[640px] text-right text-sm"><thead className="bg-[#faf7f1] text-xs text-[#82786d]"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">المبيعات</th><th className="px-4 py-3">الفواتير</th><th className="px-4 py-3">أفضل المنتجات</th></tr></thead><tbody className="divide-y divide-[#f1ece5]">{advancedRows.map((row: any) => <tr key={String(row._id)}><td className="px-4 py-3 font-semibold">{row._id || "—"}</td><td className="px-4 py-3">{row.totalSales ?? 0} ج.م</td><td className="px-4 py-3">{row.totalInvoices ?? 0}</td><td className="px-4 py-3">{Array.isArray(row.topProducts) && row.topProducts.length ? row.topProducts.map((p: any) => `${p.name} × ${p.quantitySold}`).join("، ") : "—"}</td></tr>)}</tbody></table></div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{advancedCards.map((card) => { const values = advancedData?.[card.key] || {}; return <div key={card.key} className="rounded-xl bg-[#faf7f1] p-4"><p className="text-xs text-[#999187]">{card.label}</p><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-[10px] text-[#aaa096]">يومي</p><p className="mt-1 font-bold">{values.daily ?? 0}</p><span className="text-[10px] text-[#b96f4a]">{card.unit}</span></div><div><p className="text-[10px] text-[#aaa096]">شهري</p><p className="mt-1 font-bold">{values.monthly ?? 0}</p><span className="text-[10px] text-[#b96f4a]">{card.unit}</span></div><div><p className="text-[10px] text-[#aaa096]">سنوي</p><p className="mt-1 font-bold">{values.yearly ?? 0}</p><span className="text-[10px] text-[#b96f4a]">{card.unit}</span></div></div></div> })}</div>}{advancedData?.inventory && <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-[#e9e3d9] p-4"><p className="text-xs text-[#999187]">إجمالي كمية المخزون</p><p className="mt-2 font-display text-2xl font-bold">{advancedData.inventory.totalQuantity ?? 0}</p></div><div className="rounded-xl border border-[#e9e3d9] p-4"><p className="text-xs text-[#999187]">قيمة المخزون</p><p className="mt-2 font-display text-2xl font-bold">{advancedData.inventory.totalValue ?? 0} ج.م</p></div></div>}</div>}</div><div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6"><div className="flex items-center justify-between"><div><h2 className="font-display text-lg font-bold">الرسوم البيانية التشغيلية</h2><p className="mt-1 text-xs text-[#999187]">تعتمد على بيانات API الفعلية فقط</p></div><span className="rounded-full bg-[#e6f0e5] px-3 py-1 text-[11px] font-semibold text-[#5d805a]">بيانات فعلية</span></div><div className="mt-5 grid gap-5 lg:grid-cols-2"><div><p className="mb-2 text-xs font-semibold">اتجاه المبيعات اليومية</p>{reports.length ? <div className="h-64" dir="ltr"><ResponsiveContainer width="100%" height="100%"><LineChart data={reports}><CartesianGrid strokeDasharray="3 3" stroke="#eee8df" /><XAxis dataKey="_id" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip /><Line type="monotone" dataKey="totalSales" stroke="#b96f4a" strokeWidth={3} /></LineChart></ResponsiveContainer></div> : <p className="py-10 text-xs text-[#999187]">لا توجد بيانات مبيعات كافية للرسم.</p>}</div><div><p className="mb-2 text-xs font-semibold">توزيع المصروفات حسب الفئة</p>{Array.isArray((comprehensive as any)?.expenses?.expensesByCategory) && (comprehensive as any).expenses.expensesByCategory.length ? <div className="h-64" dir="ltr"><ResponsiveContainer width="100%" height="100%"><BarChart data={(comprehensive as any).expenses.expensesByCategory}><CartesianGrid strokeDasharray="3 3" stroke="#eee8df" /><XAxis dataKey="category" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip /><Bar dataKey="amount" fill="#172433" /></BarChart></ResponsiveContainer></div> : <p className="py-10 text-xs text-[#999187]">لا يعيد الباك إند توزيع المصروفات حسب الفئة لهذه الاستجابة.</p>}</div></div></div><div className="overflow-hidden rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6"><h2 className="font-display text-lg font-bold">التقارير اليومية</h2><p className="mt-1 text-xs text-[#999187]">GET /api/admin/reports · {reports.length} يوم</p>{reports.length === 0 ? <p className="py-8 text-center text-sm text-[#999187]">لا توجد تقارير.</p> : <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[700px] text-right text-sm"><thead className="bg-[#faf7f1] text-xs text-[#82786d]"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">إجمالي المبيعات</th><th className="px-4 py-3">الفواتير</th><th className="px-4 py-3">أفضل المنتجات</th></tr></thead><tbody className="divide-y divide-[#f1ece5]">{reports.map((row) => <tr key={String(row._id)}><td className="px-4 py-4 font-semibold">{row._id}</td><td className="px-4 py-4">{row.totalSales ?? 0} ج.م</td><td className="px-4 py-4">{row.totalInvoices ?? 0}</td><td className="px-4 py-4">{Array.isArray(row.topProducts) && row.topProducts.length ? row.topProducts.map((p: any) => `${p.name} × ${p.quantitySold}`).join("، ") : "—"}</td></tr>)}</tbody></table></div>}</div></div>; }
+function AnalyticsContent() {
+  const [activePeriod, setActivePeriod] = useState<string>("month");
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
+  const [periodData, setPeriodData] = useState<PeriodAnalytics | null>(null);
+  const [loadingPeriod, setLoadingPeriod] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+
+  // Historical reports state
+  const [historicalType, setHistoricalType] = useState<"daily" | "monthly" | "yearly">("daily");
+  const [reports, setReports] = useState<any[]>([]);
+  const [loadingReports, setLoadingReports] = useState<boolean>(true);
+
+  // Fetch Period Analytics
+  const fetchPeriodData = async (period: string, start?: string, end?: string) => {
+    setLoadingPeriod(true);
+    setError("");
+    try {
+      const response = await getPeriodAnalytics(period, start, end);
+      if (response && response.data) {
+        setPeriodData(response.data);
+      } else {
+        setError("لم يتم إرجاع بيانات صالحة للتحليلات");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذر تحميل التحليلات للفترة المحددة");
+    } finally {
+      setLoadingPeriod(false);
+    }
+  };
+
+  // Fetch Historical Reports
+  const fetchHistoricalReports = async (type: "daily" | "monthly" | "yearly") => {
+    setLoadingReports(true);
+    try {
+      const response = await getAdminReports(type);
+      const data = (response as any)?.data || response;
+      setReports(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Error loading historical reports:", e);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPeriodData(activePeriod, activePeriod === "custom" ? startDate : undefined, activePeriod === "custom" ? endDate : undefined);
+  }, [activePeriod, startDate, endDate]);
+
+  useEffect(() => {
+    fetchHistoricalReports(historicalType);
+  }, [historicalType]);
+
+  // Export Period Data to Excel
+  const exportToExcel = () => {
+    if (!periodData) return;
+    const overviewData = [
+      { "المؤشر": "إجمالي الإيرادات", "القيمة": `${periodData.overview.totalRevenue} ج.م` },
+      { "المؤشر": "تكلفة المبيعات (المصاريف)", "القيمة": `${periodData.overview.totalExpenses} ج.م` },
+      { "المؤشر": "صافي الأرباح", "القيمة": `${periodData.overview.netProfit} ج.م` },
+      { "المؤشر": "هامش الربح %", "القيمة": `${periodData.overview.profitMargin} %` },
+      { "المؤشر": "إجمالي الفواتير", "القيمة": `${periodData.overview.totalOrders} فاتورة` },
+      { "المؤشر": "عدد القطع المباعة", "القيمة": `${periodData.overview.totalItemsSold} قطعة` },
+      { "المؤشر": "متوسط قيمة الفاتورة", "القيمة": `${periodData.overview.averageOrderValue} ج.م` },
+      { "المؤشر": "نسبة الخصومات", "القيمة": `${periodData.overview.discountRate} %` }
+    ];
+
+    const productsData = periodData.topProducts.map((p: PeriodAnalyticsTopProduct, idx: number) => ({
+      "الترتيب": idx + 1,
+      "المنتج": p.productName,
+      "رمز SKU": p.sku || "N/A",
+      "الكمية المباعة": p.totalQuantity,
+      "إجمالي المبيعات": `${p.totalRevenue} ج.م`,
+      "عدد الفواتير": p.orderCount
+    }));
+
+    const paymentsData = periodData.paymentMethods.map((p: PeriodAnalyticsPaymentMethod) => ({
+      "طريقة الدفع": p._id === "cash" ? "نقداً" : p._id === "card" ? "بطاقة دفع" : p._id,
+      "عدد العمليات": p.count,
+      "إجمالي المبلغ": `${p.amount} ج.م`
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const wsOverview = XLSX.utils.json_to_sheet(overviewData);
+    const wsProducts = XLSX.utils.json_to_sheet(productsData);
+    const wsPayments = XLSX.utils.json_to_sheet(paymentsData);
+
+    XLSX.utils.book_append_sheet(wb, wsOverview, "ملخص الأداء المالي");
+    XLSX.utils.book_append_sheet(wb, wsProducts, "أكثر المنتجات مبيعاً");
+    XLSX.utils.book_append_sheet(wb, wsPayments, "طرق الدفع");
+
+    XLSX.writeFile(wb, `تقرير_أداء_Kasher_${periodData.period.description.replace(/\s+/g, "_")}.xlsx`);
+  };
+
+  // Printable Styles CSS Injection
+  const printStyles = `
+    @media print {
+      body { background: white !important; color: black !important; }
+      aside, header, button, .no-print { display: none !important; }
+      main, .print-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+      .print-card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    }
+  `;
+
+  // Render Section
+  return (
+    <div className="space-y-6 print-content">
+      <style>{printStyles}</style>
+
+      {/* Control Filters Bar */}
+      <div className="no-print flex flex-col justify-between gap-4 rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-5 md:flex-row md:items-center">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "today", label: "اليوم" },
+            { key: "week", label: "هذا الأسبوع" },
+            { key: "month", label: "هذا الشهر" },
+            { key: "year", label: "هذا العام" },
+            { key: "custom", label: "فترة مخصصة" },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setActivePeriod(item.key)}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                activePeriod === item.key
+                  ? "bg-[#172433] text-white shadow-md"
+                  : "bg-[#faf7f1] text-[#6f6b65] hover:bg-[#f0ebe3]"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={exportToExcel}
+            disabled={!periodData}
+            className="rounded-xl border-[#e1d8cc] bg-white text-xs font-bold hover:bg-[#faf7f1]"
+          >
+            تصدير Excel
+          </Button>
+          <Button
+            onClick={() => window.print()}
+            disabled={!periodData}
+            className="rounded-xl bg-[#b96f4a] text-xs font-bold hover:bg-[#a96040] text-white"
+          >
+            طباعة التقرير / PDF
+          </Button>
+        </div>
+      </div>
+
+      {/* Custom range date pickers */}
+      {activePeriod === "custom" && (
+        <div className="no-print grid gap-4 rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-5 sm:grid-cols-2">
+          <label className="text-xs font-semibold text-[#6f625a]">
+            من تاريخ
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="mt-2 h-11 border-[#e1d8cc]"
+            />
+          </label>
+          <label className="text-xs font-semibold text-[#6f625a]">
+            إلى تاريخ
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="mt-2 h-11 border-[#e1d8cc]"
+            />
+          </label>
+        </div>
+      )}
+
+      {error && (
+        <p className="rounded-xl bg-[#f9e7df] p-4 text-xs text-[#9b4c32] font-semibold">{error}</p>
+      )}
+
+      {loadingPeriod ? (
+        <div className="py-20 text-center text-sm text-[#999187]">جاري تحميل البيانات التفصيلية...</div>
+      ) : (
+        <>
+          {/* Active Period Description */}
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#b96f4a] animate-pulse" />
+            <h2 className="font-display text-base font-bold text-[#172433]">
+              {periodData?.period.description || "تقرير الأداء المالي للفترة المحددة"}
+            </h2>
+          </div>
+
+          {/* Overview Cards (Grid 4 columns) */}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                label: "إجمالي المبيعات",
+                value: periodData?.overview.totalRevenue,
+                suffix: "ج.م",
+                color: "text-[#b96f4a]",
+              },
+              {
+                label: "تكلفة المبيعات (المصاريف)",
+                value: periodData?.overview.totalExpenses,
+                suffix: "ج.م",
+                color: "text-[#8a8378]",
+              },
+              {
+                label: "صافي الأرباح",
+                value: periodData?.overview.netProfit,
+                suffix: "ج.م",
+                color: "text-[#6e8d65]",
+              },
+              {
+                label: "هامش الربح",
+                value: periodData?.overview.profitMargin,
+                suffix: "%",
+                color: "text-[#172433]",
+              },
+              {
+                label: "إجمالي الفواتير",
+                value: periodData?.overview.totalOrders,
+                suffix: "فاتورة",
+                color: "text-[#b96f4a]",
+              },
+              {
+                label: "القطع المباعة",
+                value: periodData?.overview.totalItemsSold,
+                suffix: "قطعة",
+                color: "text-[#8a8378]",
+              },
+              {
+                label: "متوسط الفاتورة",
+                value: periodData?.overview.averageOrderValue,
+                suffix: "ج.م",
+                color: "text-[#172433]",
+              },
+              {
+                label: "معدل الخصومات",
+                value: periodData?.overview.discountRate,
+                suffix: "%",
+                color: "text-[#9b4c32]",
+              },
+            ].map((card) => (
+              <div
+                key={card.label}
+                className="print-card rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-5 shadow-[0_4px_12px_rgba(45,36,25,.02)]"
+              >
+                <p className="text-xs text-[#999187] font-semibold">{card.label}</p>
+                <p className={`mt-3 font-display text-2xl font-bold ${card.color}`}>
+                  {card.value !== undefined && card.value !== null
+                    ? Number(card.value).toLocaleString("ar-SA")
+                    : "0"}
+                </p>
+                <span className="mt-1 block text-[10px] text-[#aaa096]">{card.suffix}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Visualizations (Chart + Payment breakdown) */}
+          <div className="grid gap-5 lg:grid-cols-3">
+            <div className="print-card lg:col-span-2 rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6 shadow-[0_4px_12px_rgba(45,36,25,.02)]">
+              <h3 className="font-display text-base font-bold text-[#172433] mb-1">
+                اتجاه المبيعات والأرباح عبر الزمن
+              </h3>
+              <p className="text-xs text-[#999187] mb-6">مخطط تفصيلي للمقارنة بين الإيرادات وصافي الربح</p>
+              
+              {periodData?.timeTrend && periodData.timeTrend.length > 0 ? (
+                <div className="h-72" dir="ltr">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={periodData.timeTrend}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#b96f4a" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#b96f4a" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6e8d65" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#6e8d65" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eee8df" />
+                      <XAxis dataKey="_id" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        name="الإيرادات"
+                        stroke="#b96f4a"
+                        fillOpacity={1}
+                        fill="url(#colorRevenue)"
+                        strokeWidth={2.5}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="profit"
+                        name="الأرباح"
+                        stroke="#6e8d65"
+                        fillOpacity={1}
+                        fill="url(#colorProfit)"
+                        strokeWidth={2.5}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="py-24 text-center text-xs text-[#999187]">
+                  لا توجد مبيعات كافية خلال هذه الفترة لرسم المخطط البياني.
+                </div>
+              )}
+            </div>
+
+            {/* Payment methods breakdown */}
+            <div className="print-card rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6 shadow-[0_4px_12px_rgba(45,36,25,.02)]">
+              <h3 className="font-display text-base font-bold text-[#172433] mb-1">
+                توزيع طرق الدفع
+              </h3>
+              <p className="text-xs text-[#999187] mb-6">مقارنة نسب الدفع نقداً مقابل البطاقات</p>
+
+              {periodData?.paymentMethods && periodData.paymentMethods.length > 0 ? (
+                <div className="space-y-5">
+                  {periodData.paymentMethods.map((method: PeriodAnalyticsPaymentMethod) => {
+                    const totalAmt =
+                      periodData.paymentMethods.reduce((sum: number, item: PeriodAnalyticsPaymentMethod) => sum + item.amount, 0) || 1;
+                    const percent = (method.amount / totalAmt) * 100;
+                    return (
+                      <div key={method._id} className="space-y-2">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-[#172433]">
+                            {method._id === "cash"
+                              ? "نقداً (كاش)"
+                              : method._id === "card"
+                                ? "بطاقة دفع"
+                                : method._id}
+                          </span>
+                          <span className="text-[#8a8378]">
+                            {method.amount.toLocaleString("ar-SA")} ج.م · {method.count} فواتير
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-[#f0ebe3] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[#b96f4a] transition-all duration-500"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-left text-[#999187] font-bold">
+                          {percent.toFixed(1)}%
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-24 text-center text-xs text-[#999187]">
+                  لا تتوفر إحصائيات لطرق الدفع.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Selling Products */}
+          <div className="print-card rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6 shadow-[0_4px_12px_rgba(45,36,25,.02)]">
+            <h3 className="font-display text-base font-bold text-[#172433] mb-1">
+              المنتجات الأكثر مبيعاً
+            </h3>
+            <p className="text-xs text-[#999187] mb-6">قائمة بأول 10 منتجات تحقق أعلى كمية بيع</p>
+
+            {periodData?.topProducts && periodData.topProducts.length > 0 ? (
+              <div className="overflow-x-auto rounded-xl border border-[#eee8df]">
+                <table className="w-full min-w-[640px] text-right text-sm">
+                  <thead className="bg-[#faf7f1] text-xs text-[#82786d] font-bold">
+                    <tr>
+                      <th className="px-4 py-3">الترتيب</th>
+                      <th className="px-4 py-3">اسم المنتج</th>
+                      <th className="px-4 py-3">الباركود / SKU</th>
+                      <th className="px-4 py-3 text-center">الكمية المباعة</th>
+                      <th className="px-4 py-3 text-left">إجمالي الإيرادات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f1ece5]">
+                    {periodData.topProducts.map((product: PeriodAnalyticsTopProduct, idx: number) => (
+                      <tr key={product.productId} className="hover:bg-[#faf7f1]/50 transition">
+                        <td className="px-4 py-3 font-semibold text-[#b96f4a]">{idx + 1}</td>
+                        <td className="px-4 py-3 font-bold text-[#172433]">
+                          {product.productName}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[#6f6b65]" dir="ltr">
+                          {product.sku || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-center font-semibold text-[#172433]">
+                          {product.totalQuantity}
+                        </td>
+                        <td className="px-4 py-3 text-left font-bold text-[#6e8d65]">
+                          {product.totalRevenue.toLocaleString("ar-SA")} ج.م
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-sm text-[#999187]">
+                لم يتم بيع أي منتجات خلال هذه الفترة بعد.
+              </div>
+            )}
+          </div>
+
+          {/* Customers Analytics Card */}
+          <div className="print-card rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6 shadow-[0_4px_12px_rgba(45,36,25,.02)]">
+            <h3 className="font-display text-base font-bold text-[#172433] mb-1">
+              تفاعل العملاء مع المتجر
+            </h3>
+            <p className="text-xs text-[#999187] mb-6">إحصاءات حول سلوك شراء العملاء</p>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-[#faf7f1] p-4 text-center">
+                <p className="text-xs text-[#999187] font-semibold">العملاء الفريدون</p>
+                <p className="mt-2 text-2xl font-bold text-[#172433]">
+                  {periodData?.customers.uniqueCustomers || 0} عميل
+                </p>
+              </div>
+              <div className="rounded-xl bg-[#faf7f1] p-4 text-center">
+                <p className="text-xs text-[#999187] font-semibold">متوسط قيمة مشتريات العميل</p>
+                <p className="mt-2 text-2xl font-bold text-[#6e8d65]">
+                  {(periodData?.customers.averageCustomerValue || 0).toLocaleString("ar-SA")} ج.م
+                </p>
+              </div>
+              <div className="rounded-xl bg-[#faf7f1] p-4 text-center">
+                <p className="text-xs text-[#999187] font-semibold">إجمالي إيرادات العملاء المسجلين</p>
+                <p className="mt-2 text-2xl font-bold text-[#b96f4a]">
+                  {(periodData?.customers.totalCustomerRevenue || 0).toLocaleString("ar-SA")} ج.م
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Historical logs table */}
+      <div className="no-print overflow-hidden rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6 shadow-[0_4px_12px_rgba(45,36,25,.02)]">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h3 className="font-display text-base font-bold text-[#172433] mb-1">
+              التقارير التاريخية المجمعة
+            </h3>
+            <p className="text-xs text-[#999187]">كافة التقارير المجمعة تلقائياً من الفواتير</p>
+          </div>
+
+          <div className="flex gap-1.5 rounded-xl bg-[#faf7f1] p-1">
+            {[
+              { key: "daily", label: "يومي" },
+              { key: "monthly", label: "شهري" },
+              { key: "yearly", label: "سنوي" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setHistoricalType(t.key as any)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                  historicalType === t.key
+                    ? "bg-[#172433] text-white shadow-sm"
+                    : "text-[#6f6b65] hover:text-[#172433]"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loadingReports ? (
+          <div className="py-12 text-center text-xs text-[#999187]">جاري تحميل التقارير التاريخية...</div>
+        ) : reports.length === 0 ? (
+          <p className="py-8 text-center text-xs text-[#999187]">لا توجد تقارير مسجلة.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-[#eee8df]">
+            <table className="w-full min-w-[700px] text-right text-sm">
+              <thead className="bg-[#faf7f1] text-xs text-[#82786d] font-bold">
+                <tr>
+                  <th className="px-4 py-3">التاريخ</th>
+                  <th className="px-4 py-3">إجمالي المبيعات</th>
+                  <th className="px-4 py-3 text-center">الفواتير</th>
+                  <th className="px-4 py-3">أفضل المنتجات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f1ece5]">
+                {reports.map((row) => (
+                  <tr key={String(row._id)} className="hover:bg-[#faf7f1]/30 transition">
+                    <td className="px-4 py-4 font-semibold text-[#172433]">{row._id}</td>
+                    <td className="px-4 py-4 font-bold text-[#6e8d65]">
+                      {(row.totalSales ?? 0).toLocaleString("ar-SA")} ج.م
+                    </td>
+                    <td className="px-4 py-4 text-center font-semibold text-[#172433]">
+                      {row.totalInvoices ?? 0}
+                    </td>
+                    <td className="px-4 py-4 text-xs text-[#77736f]">
+                      {Array.isArray(row.topProducts) && row.topProducts.length
+                        ? row.topProducts.map((p: any) => `${p.name} × ${p.quantitySold}`).join("، ")
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ProfileContent() { const [profile, setProfile] = useState<AdminProfile>({}); const [form, setForm] = useState({ firstName: "", lastName: "", companyName: "", companyAddress: "", phone: "", currentPassword: "", newPassword: "" }); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [lookupId, setLookupId] = useState(""); const [lookup, setLookup] = useState<AdminProfile | null>(null); useEffect(() => { getProfile().then((response) => { const data = (response as { data?: { admin?: AdminProfile; profile?: AdminProfile } }).data; const next = data?.admin || data?.profile || response as AdminProfile; setProfile(next); setForm((current) => ({ ...current, firstName: next.firstName || "", lastName: next.lastName || "", companyName: next.companyName || "", companyAddress: next.companyAddress || "", phone: next.phone || "" })); }).catch((e) => setError(e instanceof Error ? e.message : "تعذر تحميل الملف الشخصي")); }, []); const lookupAdmin = async () => { if (!lookupId.trim()) return; try { const response = await getAdminById(lookupId.trim()); const data = (response as { data?: { admin?: AdminProfile } }).data; setLookup(data?.admin || response as AdminProfile); setError(""); } catch (e) { setError(e instanceof Error ? e.message : "تعذر جلب الأدمن"); } }; const save = async () => { setMessage(""); setError(""); if (form.newPassword && !form.currentPassword) { setError("أدخل كلمة المرور الحالية أولاً"); return; } if (form.newPassword && form.newPassword.length < 6) { setError("كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل"); return; } try { const body = { firstName: form.firstName, lastName: form.lastName, companyName: form.companyName, companyAddress: form.companyAddress, phone: form.phone, ...(form.newPassword ? { currentPassword: form.currentPassword, newPassword: form.newPassword } : {}) }; const response = await updateProfile(body); const data = (response as { data?: { admin?: AdminProfile; profile?: AdminProfile } }).data; setProfile(data?.admin || data?.profile || response as AdminProfile); setForm({ ...form, currentPassword: "", newPassword: "" }); setMessage("تم تحديث الملف الشخصي بنجاح"); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحديث الملف الشخصي"); } }; return <div className="grid gap-5 lg:grid-cols-[1fr_320px]">{(error || message) && <p className={`rounded-xl p-3 text-xs lg:col-span-2 ${error ? "bg-[#f9e7df] text-[#9b4c32]" : "bg-[#e6f0e5] text-[#5d805a]"}`}>{error || message}</p>}<div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6"><h2 className="font-display text-lg font-bold">بيانات الحساب والمتجر</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><Input placeholder="الاسم الأول" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /><Input placeholder="اسم العائلة" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /><Input placeholder="اسم الشركة" value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} /><Input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /><Input placeholder="عنوان الشركة" value={form.companyAddress} onChange={(e) => setForm({ ...form, companyAddress: e.target.value })} className="md:col-span-2" /></div><Button onClick={save} className="mt-5 rounded-xl bg-[#172433]">حفظ التغييرات</Button></div><div className="rounded-2xl border border-[#ead8ca] bg-[#f7ebe4] p-6"><h2 className="font-display text-lg font-bold">تغيير كلمة المرور</h2><p className="mt-2 text-xs leading-6 text-[#8c776d]">أدخل كلمة المرور الحالية فقط عند إنشاء كلمة مرور جديدة.</p><div className="mt-5 space-y-3"><Input type="password" placeholder="كلمة المرور الحالية" value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} /><Input type="password" placeholder="كلمة المرور الجديدة" value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} /></div></div><div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-6 lg:col-span-2"><h2 className="font-display text-lg font-bold">جلب أدمن بالمعرّف</h2><p className="mt-1 text-xs text-[#999187]">GET /api/admin/admin/:id</p><div className="mt-4 flex gap-3"><Input placeholder="معرّف الأدمن" value={lookupId} onChange={(e) => setLookupId(e.target.value)} /><Button onClick={lookupAdmin} className="bg-[#b96f4a]">جلب البيانات</Button></div>{lookup && <p className="mt-4 text-sm text-[#5f686f]">{lookup.firstName || "—"} {lookup.lastName || ""} · {lookup.email || "—"} · {lookup.role || "admin"}</p>}</div><div className="rounded-2xl bg-[#172433] p-6 text-white lg:col-span-2"><p className="text-xs text-[#d99a78]">الحساب الحالي</p><h2 className="mt-2 font-display text-2xl font-bold">{profile.firstName || "—"} {profile.lastName || ""}</h2><p className="mt-2 text-sm text-[#c9d4da]">{profile.email || "—"} · {profile.role || "admin"}</p></div></div>; }

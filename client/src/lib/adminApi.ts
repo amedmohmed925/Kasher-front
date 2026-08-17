@@ -14,7 +14,57 @@ export type AdminStats = { totalInvoices?: number; dailyProfit?: number; monthly
 export type AdminProfile = { id?: string; _id?: string; firstName?: string; lastName?: string; companyName?: string; companyAddress?: string; phone?: string; email?: string; role?: string };
 export type AdminReport = Record<string, unknown>;
 export type AdvancedAnalytics = Record<string, unknown>;
-export type PeriodAnalytics = Record<string, any>;
+export interface PeriodAnalyticsOverview {
+  totalRevenue: number;
+  totalOrders: number;
+  totalProfit: number;
+  totalExpenses: number;
+  netProfit: number;
+  averageOrderValue: number;
+  totalDiscount: number;
+  totalItemsSold: number;
+  profitMargin: number;
+  discountRate: number;
+}
+export interface PeriodAnalyticsCustomers {
+  uniqueCustomers: number;
+  averageCustomerValue: number;
+  totalCustomerRevenue: number;
+}
+export interface PeriodAnalyticsTopProduct {
+  productId: string;
+  productName: string;
+  sku: string;
+  totalQuantity: number;
+  totalRevenue: number;
+  orderCount: number;
+}
+export interface PeriodAnalyticsPaymentMethod {
+  _id: string;
+  count: number;
+  amount: number;
+}
+export interface PeriodAnalyticsTimeTrend {
+  _id: string;
+  revenue: number;
+  orders: number;
+  profit: number;
+  expenses: number;
+  netProfit: number;
+}
+export interface PeriodAnalytics {
+  period: {
+    type: string;
+    startDate: string | null;
+    endDate: string | null;
+    description: string;
+  };
+  overview: PeriodAnalyticsOverview;
+  customers: PeriodAnalyticsCustomers;
+  topProducts: PeriodAnalyticsTopProduct[];
+  paymentMethods: PeriodAnalyticsPaymentMethod[];
+  timeTrend: PeriodAnalyticsTimeTrend[];
+}
 export type AnalyticsComparison = Record<string, any>;
 export type DashboardSummary = Record<string, any>;
 export type ComprehensiveDashboard = Record<string, any>;
