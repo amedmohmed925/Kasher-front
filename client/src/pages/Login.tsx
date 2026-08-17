@@ -2,7 +2,7 @@
  * Kasher — Warm Functional Modernism. The entry screen explains the two
  * workspaces and keeps real login separate from clearly-labelled previews.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Building2, KeyRound, Mail, ShieldCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,14 @@ import { useLocation } from "wouter";
 import { apiPost } from "@/lib/api";
 
 export default function Login() {
-  const { login, enterPreview, loading } = useAuth();
+  const { user, login, enterPreview, loading } = useAuth();
   const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === "superAdmin" ? "/super-admin" : "/admin", { replace: true });
+    }
+  }, [user, navigate]);
   const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState("");
   const [forgotOpen, setForgotOpen] = useState(false); const [forgotStep, setForgotStep] = useState<1 | 2>(1);
   const [forgotEmail, setForgotEmail] = useState(""); const [forgotOtp, setForgotOtp] = useState(""); const [forgotNewPass, setForgotNewPass] = useState(""); const [forgotConfirmPass, setForgotConfirmPass] = useState(""); const [forgotMsg, setForgotMsg] = useState(""); const [forgotError, setForgotError] = useState(""); const [forgotLoading, setForgotLoading] = useState(false);
