@@ -37,13 +37,13 @@ function Router() {
   return <Suspense fallback={<RouteFallback />}><Switch>
     <Route path="/login" component={Login} />
     <Route path="/register" component={Register} />
-    <Route path="/admin"><Guard role="admin"><Home /></Guard></Route>
     <Route path="/admin/pos"><Guard role="admin"><AdminSection section="pos" /></Guard></Route>
     <Route path="/admin/products"><Guard role="admin"><AdminSection section="products" /></Guard></Route>
     <Route path="/admin/invoices"><Guard role="admin"><AdminSection section="invoices" /></Guard></Route>
     <Route path="/admin/customers"><Guard role="admin"><AdminSection section="customers" /></Guard></Route>
     <Route path="/admin/analytics"><Guard role="admin"><AdminSection section="analytics" /></Guard></Route>
     <Route path="/admin/profile"><Guard role="admin"><AdminSection section="profile" /></Guard></Route>
+    <Route path="/admin"><Guard role="admin"><Home /></Guard></Route>
     <Route path="/super-admin"><Guard role="superAdmin"><SuperAdminDashboard /></Guard></Route>
     <Route path="/super-admin/traders"><Guard role="superAdmin"><SuperAdminSection section="traders" /></Guard></Route>
     <Route path="/super-admin/subscriptions"><Guard role="superAdmin"><SuperAdminSection section="subscriptions" /></Guard></Route>

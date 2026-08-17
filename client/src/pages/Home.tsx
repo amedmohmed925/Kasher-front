@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiGet, API_BASE_URL } from "@/lib/api";
 import type { AdminStats, Product } from "@/lib/adminApi";
 import { useAuth } from "@/contexts/AuthContext";
+import AdminLayout from "@/components/AdminLayout";
 
 const navItems = [
   { label: "نظرة عامة", icon: LayoutDashboard },
@@ -156,175 +157,54 @@ export default function Home() {
   );
 
   return (
-    <div
-      dir="rtl"
-      className="min-h-screen bg-[#f7f4ee] text-[#172433] selection:bg-[#b96f4a]/20"
-    >
-      <div className="pointer-events-none fixed inset-0 z-0 bg-[url('/manus-storage/kasher-dashboard-texture_2e4a005c.png')] bg-cover bg-center opacity-[0.08]" />
-      <aside
-        className={`fixed inset-y-0 right-0 z-40 w-[270px] border-l border-[#e7e0d4] bg-[#fbfaf7]/95 px-5 py-6 backdrop-blur-xl transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="mb-11 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#b96f4a] shadow-[0_8px_20px_rgba(185,111,74,.2)]">
-              <img
-                src="/manus-storage/kasher-mark_178c0f71.png"
-                alt="Kasher"
-                className="h-8 w-8 object-contain"
-              />
-            </div>
-            <div>
-              <p className="font-display text-xl font-bold tracking-tight">
-                Kasher
-              </p>
-              <p className="text-[11px] text-[#8a8378]">نظام تشغيل متجرك</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-2 text-[#8a8378] lg:hidden"
-            aria-label="إغلاق القائمة"
+    <AdminLayout
+      activeKey="overview"
+      title={`صباح الخير، ${user?.firstName || "محمد"}`}
+      eyebrow="لوحة التحكم"
+      description="هذه صورة واضحة عن أداء متجرك اليوم."
+      actionButton={
+        <>
+          {user ? (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await logout();
+                setLocation("/login");
+              }}
+              className="h-11 gap-2 rounded-xl border-[#ddd4c8] bg-[#fbfaf7] px-4 text-[#9b5540] hover:bg-white"
+            >
+              تسجيل الخروج
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/login")}
+              className="h-11 gap-2 rounded-xl border-[#ddd4c8] bg-[#fbfaf7] px-4 text-[#172433] hover:bg-white"
+            >
+              <LogIn size={16} /> تسجيل الدخول
+            </Button>
+          )}
+          <Button
+            onClick={() => selectNav("نقطة البيع")}
+            className="h-11 gap-2 rounded-xl bg-[#b96f4a] px-5 text-white shadow-[0_8px_18px_rgba(185,111,74,.2)] hover:bg-[#a96040]"
           >
-            <X size={18} />
-          </button>
-        </div>
-        <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#a39b90]">
-          مساحة العمل
-        </p>
-        <nav className="space-y-1">
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const selected = active === item.label;
-            return (
-              <button
-                key={item.label}
-                onClick={() => {
-                  selectNav(item.label);
-                  setSidebarOpen(false);
-                }}
-                className={`group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right text-sm transition-all ${selected ? "bg-[#172433] font-semibold text-white shadow-[0_7px_18px_rgba(23,36,51,.12)]" : "text-[#6f6b65] hover:bg-[#f0ebe3] hover:text-[#172433]"}`}
-              >
-                <Icon size={18} strokeWidth={selected ? 2.2 : 1.8} />
-                <span>{item.label}</span>
-                {selected && (
-                  <span className="mr-auto h-1.5 w-1.5 rounded-full bg-[#d99a78]" />
-                )}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="absolute bottom-6 left-5 right-5 rounded-2xl border border-[#ead8ca] bg-[#f4e7de] p-4">
-          <div className="mb-3 flex items-center gap-2 text-[#9a5538]">
-            <Sparkles size={16} />
-            <span className="text-xs font-bold">تنبيه ذكي</span>
-          </div>
-          <p className="text-xs leading-6 text-[#765f52]">
-            لديك 8 منتجات ستحتاج لإعادة التخزين قريباً.
-          </p>
-          <button className="mt-2 text-xs font-bold text-[#9a5538]">
-            عرض المخزون <ArrowLeft className="mr-1 inline" size={13} />
-          </button>
-        </div>
-      </aside>
-
-      {sidebarOpen && (
-        <button
-          className="fixed inset-0 z-30 bg-[#172433]/20 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="إغلاق القائمة"
+            <ShoppingCart size={16} /> افتح نقطة البيع
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-6 flex items-center gap-2">
+        <span
+          className={`h-2 w-2 rounded-full ${apiStatus === "online" ? "bg-[#6e8d65]" : apiStatus === "offline" ? "bg-[#b96f4a]" : "animate-pulse bg-[#c4a56e]"}`}
         />
-      )}
-      <main className="relative z-10 min-h-screen lg:mr-[270px]">
-        <header className="flex h-[76px] items-center justify-between border-b border-[#e9e3d9] bg-[#fbfaf7]/75 px-5 backdrop-blur-xl md:px-9">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="rounded-xl border border-[#e5dfd5] bg-white p-2.5 lg:hidden"
-              aria-label="فتح القائمة"
-            >
-              <Menu size={19} />
-            </button>
-            <div className="hidden items-center gap-2 text-sm text-[#8a8378] sm:flex">
-              <span>مساحة التاجر</span>
-              <span className="text-[#c6bdb1]">/</span>
-              <span className="font-semibold text-[#172433]">{active}</span>
-            </div>
-            <div className="sm:hidden font-display text-lg font-bold">
-              {active}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-5">
-            <button
-              className="relative rounded-xl p-2.5 text-[#777169] transition hover:bg-[#f0ebe3]"
-              aria-label="الإشعارات"
-            >
-              <Bell size={19} />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#b96f4a]" />
-            </button>
-            <div className="hidden h-7 w-px bg-[#e5dfd5] md:block" />
-            <button className="flex items-center gap-2 rounded-xl p-1.5 pl-2 transition hover:bg-[#f0ebe3]">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e9d2c4] text-sm font-bold text-[#8f4e34]">
-                {(user?.companyName || user?.firstName || "م")[0]}
-              </div>
-              <div className="hidden text-right md:block">
-                <p className="text-xs font-bold">{user?.companyName || "متجر المذاق"}</p>
-                <p className="text-[10px] text-[#999187]">الفرع الرئيسي</p>
-              </div>
-              <ChevronDown size={15} className="text-[#948d82]" />
-            </button>
-          </div>
-        </header>
-        <div className="mx-auto max-w-[1440px] px-5 py-8 md:px-9 md:py-11">
-          <section className="mb-9 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 rounded-full ${apiStatus === "online" ? "bg-[#6e8d65]" : apiStatus === "offline" ? "bg-[#b96f4a]" : "animate-pulse bg-[#c4a56e]"}`}
-                />
-                <span className="text-xs font-medium text-[#7d776e]">
-                  {apiStatus === "online"
-                    ? "متصل بالباك إند"
-                    : apiStatus === "offline"
-                      ? "وضع العرض — تعذر الاتصال"
-                      : "جاري فحص الاتصال"}
-                </span>
-              </div>
-              <h1 className="font-display text-3xl font-bold tracking-[-.04em] text-[#172433] md:text-[38px]">
-                صباح الخير، {user?.firstName || "محمد"} <span className="text-[#b96f4a]">.</span>
-              </h1>
-              <p className="mt-2 text-sm text-[#898278]">
-                هذه صورة واضحة عن أداء متجرك اليوم.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {user ? (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    await logout();
-                    setLocation("/login");
-                  }}
-                  className="h-11 gap-2 rounded-xl border-[#ddd4c8] bg-[#fbfaf7] px-4 text-[#9b5540] hover:bg-white"
-                >
-                  تسجيل الخروج
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/login")}
-                  className="h-11 gap-2 rounded-xl border-[#ddd4c8] bg-[#fbfaf7] px-4 text-[#172433] hover:bg-white"
-                >
-                  <LogIn size={16} /> تسجيل الدخول
-                </Button>
-              )}
-              <Button
-                onClick={() => selectNav("نقطة البيع")}
-                className="h-11 gap-2 rounded-xl bg-[#b96f4a] px-5 text-white shadow-[0_8px_18px_rgba(185,111,74,.2)] hover:bg-[#a96040]"
-              >
-                <ShoppingCart size={16} /> افتح نقطة البيع
-              </Button>
-            </div>
-          </section>
+        <span className="text-xs font-medium text-[#7d776e]">
+          {apiStatus === "online"
+            ? "متصل بالباك إند"
+            : apiStatus === "offline"
+              ? "وضع العرض — تعذر الاتصال"
+              : "جاري فحص الاتصال"}
+        </span>
+      </div>
           <section className="grid gap-4 md:grid-cols-3">
             {dashboardStats.map(stat => {
               const Icon = stat.icon;
@@ -516,10 +396,7 @@ export default function Home() {
               <span>الإصدار 1.0.0</span>
             </span>
           </footer>
-        </div>
-      </main>
-
-    </div>
+    </AdminLayout>
   );
 }
 

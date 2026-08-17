@@ -15,6 +15,7 @@ import { useLocation } from "wouter";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { createCategory, createCustomer, createInvoice, createProduct, deleteCategory, deleteCustomer, deleteProduct, getAdminReports, getDashboardAnalytics, getAdvancedAnalytics, getAnalytics, getAdminStats, getPeriodAnalytics, compareAnalytics, getDashboardSummary, getComprehensiveDashboard, getAdminById, getCustomers, getCustomer, getCustomerStats, getProfile, listCategories, listInvoices, listAllInvoices, listProducts, updateCategory, updateProduct, updateProfile, type AdminProfile, type AdminStats, type Category, type Customer, type CustomerStats, type Invoice, type Product } from "@/lib/adminApi";
+import AdminLayout from "@/components/AdminLayout";
 
 const sections: Record<string, { title: string; eyebrow: string; description: string; icon: typeof Package }> = {
   pos: { title: "نقطة البيع", eyebrow: "عمليات المتجر", description: "ابحث عن المنتجات وأنشئ الفاتورة مباشرة من مخزون متجرك.", icon: ShoppingCart },
@@ -26,10 +27,39 @@ const sections: Record<string, { title: string; eyebrow: string; description: st
 };
 
 export default function AdminSection({ section }: { section: string }) {
-  const { user, logout } = useAuth();
-  const [, navigate] = useLocation(); const current = sections[section] || sections.products; const Icon = current.icon;
-  const go = (target: string) => navigate(target === "overview" ? "/admin" : `/admin/${target}`);
-  return <div dir="rtl" className="min-h-screen bg-[#f7f4ee] text-[#172433]"><aside className="fixed inset-y-0 right-0 z-30 hidden w-[270px] border-l border-[#e7e0d4] bg-[#fbfaf7] px-5 py-6 lg:block"><div className="mb-6 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#b96f4a]"><img src="/manus-storage/kasher-mark_178c0f71.png" alt="Kasher" className="h-7 w-7" /></div><div><b className="font-display text-xl">Kasher</b><p className="text-[10px] text-[#8a8378]">مساحة التاجر</p></div></div><div className="mb-5 rounded-2xl bg-[#edf0f1] p-3"><div className="flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e9d2c4] text-xs font-bold text-[#8f4e34]">{(user?.companyName || user?.firstName || "م")[0]}</div><div><p className="text-xs font-bold">{user?.firstName || "تاجر Kasher"}</p><p className="text-[10px] text-[#7f898f]">{user?.companyName || "المتجر"}</p></div></div></div><button onClick={() => go("overview")} className="mb-5 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right text-sm text-[#6f6b65] hover:bg-[#f0ebe3]"><LayoutDashboard size={17} /> نظرة عامة</button><p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#a39b90]">إدارة المتجر</p><nav className="space-y-1 mb-8">{Object.entries(sections).map(([key, item]) => { const NavIcon = item.icon; return <button key={key} onClick={() => go(key)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right text-sm transition ${key === section ? "bg-[#172433] font-semibold text-white" : "text-[#6f6b65] hover:bg-[#f0ebe3]"}`}><NavIcon size={17} /><span>{item.title}</span>{key === section && <i className="mr-auto h-1.5 w-1.5 rounded-full bg-[#d99a78]" />}</button>; })}</nav><button onClick={async () => { await logout(); navigate("/login"); }} className="absolute bottom-7 right-8 flex items-center gap-2 text-xs font-bold text-[#9b5540]"><LogOut size={15} /> تسجيل الخروج</button></aside><header className="flex h-[76px] items-center justify-between border-b border-[#e9e3d9] bg-[#fbfaf7] px-5 md:px-9 lg:mr-[270px]"><button onClick={() => go("overview")} className="flex items-center gap-3 text-sm font-bold"><ArrowRight size={16} /><span className="font-display text-xl">{current.title}</span></button><span className="text-xs text-[#8b847b]">بيانات مباشرة من Kasher API</span></header><main className="mx-auto max-w-[1200px] px-5 py-9 md:px-9 md:py-12 lg:mr-[270px]"><div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="mb-3 text-xs font-bold text-[#b96f4a]">{current.eyebrow}</p><h1 className="font-display text-3xl font-bold tracking-[-.04em]">{current.title}</h1><p className="mt-2 text-sm text-[#898278]">{current.description}</p></div><Button onClick={() => section === "pos" ? undefined : undefined} className="gap-2 rounded-xl bg-[#b96f4a] hover:bg-[#a96040]"><Icon size={16} /> {section === "pos" ? "إتمام البيع" : "إضافة جديد"}</Button></div>{section === "pos" ? <PosContent /> : section === "products" ? <ProductsContent /> : section === "invoices" ? <InvoicesContent /> : section === "customers" ? <CustomersContent /> : section === "profile" ? <ProfileContent /> : <AnalyticsContent />}</main></div>;
+  const current = sections[section] || sections.products;
+  const Icon = current.icon;
+
+  return (
+    <AdminLayout
+      activeKey={section}
+      title={current.title}
+      eyebrow={current.eyebrow}
+      description={current.description}
+      actionButton={
+        section !== "pos" ? (
+          <Button onClick={() => undefined} className="gap-2 rounded-xl bg-[#b96f4a] hover:bg-[#a96040] text-xs font-bold h-11 px-5">
+            <Icon size={16} />
+            إضافة جديد
+          </Button>
+        ) : undefined
+      }
+    >
+      {section === "pos" ? (
+        <PosContent />
+      ) : section === "products" ? (
+        <ProductsContent />
+      ) : section === "invoices" ? (
+        <InvoicesContent />
+      ) : section === "customers" ? (
+        <CustomersContent />
+      ) : section === "profile" ? (
+        <ProfileContent />
+      ) : (
+        <AnalyticsContent />
+      )}
+    </AdminLayout>
+  );
 }
 
 function ProductsContent() {
