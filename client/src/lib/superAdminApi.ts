@@ -92,7 +92,7 @@ export const deleteTenant = (tenantId: string) => apiDelete(`/api/superAdmin/ten
 export const disableTenant = (tenantId: string) => apiPut<{ message: string }>(`/api/superAdmin/tenants/${tenantId}/disable`, {});
 
 export const approveSubscription = (body: { subscriptionId: string; status: "approved" | "rejected"; rejectionReason?: string }) => 
-  apiPost<{ message: string; subscription: any }>("/api/superAdmin/subscriptions/approve", body);
+  apiPost<{ message: string; subscription: any }>(`/api/superAdmin/subscriptions/${body.subscriptionId}/approve`, { status: body.status, rejectionReason: body.rejectionReason });
 
 export const createAdminUser = (body: { tenantId: string; name: string; email: string; password: string }) => 
   apiPost<{ user: any }>("/api/superAdmin/users/admin", body);
