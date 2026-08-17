@@ -464,6 +464,82 @@ function PosContent() {
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
 
+  const [isPosCameraOpen, setIsPosCameraOpen] = useState(false);
+  const posScannerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!isPosCameraOpen) {
+      if (posScannerRef.current) {
+        posScannerRef.current.stop().catch(() => {}).then(() => {
+          posScannerRef.current = null;
+        });
+      }
+      return;
+    }
+
+    const startPosScanner = () => {
+      const Html5QrcodeClass = (window as any).Html5Qrcode;
+      if (!Html5QrcodeClass) {
+        setTimeout(startPosScanner, 200);
+        return;
+      }
+
+      try {
+        const html5QrCode = new Html5QrcodeClass("pos-reader");
+        posScannerRef.current = html5QrCode;
+
+        html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 150 }
+          },
+          (decodedText: string) => {
+            // Play a success sound
+            try {
+              const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+              audio.play().catch(() => {});
+            } catch (e) {}
+
+            // Process barcode to add product to cart
+            processScannedBarcode(decodedText);
+
+            // Stop scanner & close
+            html5QrCode.stop().then(() => {
+              posScannerRef.current = null;
+              setIsPosCameraOpen(false);
+            }).catch(console.error);
+          },
+          () => {
+            // Quietly ignore scan failures during frame capture
+          }
+        ).catch((err: any) => {
+          console.error("Error starting POS camera scanner:", err);
+        });
+      } catch (err) {
+        console.error("POS camera scanner initialization error:", err);
+      }
+    };
+
+    if (!(window as any).Html5Qrcode) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/html5-qrcode";
+      script.async = true;
+      script.onload = startPosScanner;
+      document.head.appendChild(script);
+    } else {
+      setTimeout(startPosScanner, 300);
+    }
+
+    return () => {
+      if (posScannerRef.current) {
+        posScannerRef.current.stop().catch(() => {}).then(() => {
+          posScannerRef.current = null;
+        });
+      }
+    };
+  }, [isPosCameraOpen]);
+
   useEffect(() => {
     Promise.all([listProducts(), getCustomers({ limit: 100 })])
       .then(([p, c]) => {
@@ -720,14 +796,24 @@ function PosContent() {
       <div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa] p-5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
           <h2 className="font-display text-lg font-bold text-[#172433]">منتجات متجرك</h2>
-          <div className="relative w-full sm:w-72">
-            <Search size={16} className="absolute right-3 top-3 text-[#a19a90]" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث باسم المنتج أو الـ SKU..."
-              className="pr-9 h-10 border-[#e1d8cc] rounded-xl text-xs"
-            />
+          <div className="flex gap-2 w-full sm:w-auto items-center">
+            <div className="relative w-full sm:w-72">
+              <Search size={16} className="absolute right-3 top-3 text-[#a19a90]" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث باسم المنتج أو الباركود..."
+                className="pr-9 h-10 border-[#e1d8cc] rounded-xl text-xs"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => setIsPosCameraOpen(true)}
+              className="h-10 px-3 bg-[#b96f4a] hover:bg-[#a96040] text-white rounded-xl flex items-center gap-1.5 text-xs font-bold"
+            >
+              <Camera size={15} />
+              مسح بالكاميرا
+            </Button>
           </div>
         </div>
 
@@ -1009,6 +1095,33 @@ function PosContent() {
           )}
         </div>
       </div>
+
+      {/* POS Camera Barcode Scanner Modal */}
+      <Dialog open={isPosCameraOpen} onOpenChange={(open) => {
+        if (!open) setIsPosCameraOpen(false);
+      }}>
+        <DialogContent className="sm:max-w-md bg-[#fffdfa] border-[#e9e3d9] text-[#172433] rounded-2xl shadow-xl p-6" showCloseButton={true}>
+          <DialogHeader className="text-right">
+            <DialogTitle className="font-display text-lg font-bold text-[#172433] flex items-center gap-2">
+              <Camera className="text-[#b96f4a]" size={20} />
+              مسح باركود المنتج بالكاميرا
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#999187] mt-1">
+              وجه كاميرا الهاتف نحو باركود المنتج ليتم إضافته مباشرة إلى السلة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 flex flex-col items-center justify-center">
+            <div id="pos-reader" className="w-full max-w-[320px] h-[240px] rounded-xl overflow-hidden border border-[#eee8df] bg-[#faf7f1]" />
+          </div>
+
+          <DialogFooter className="mt-4 flex flex-row gap-2 justify-end">
+            <Button variant="outline" onClick={() => setIsPosCameraOpen(false)} className="rounded-xl border-[#e1d8cc] text-[#6f6b65] hover:bg-[#f0ebe3]">
+              إلغاء
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
