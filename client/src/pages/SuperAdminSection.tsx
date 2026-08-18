@@ -263,7 +263,7 @@ function TradersContent() {
 }
 
 function SubscriptionsContent() {
-  const [tenants, setTenants] = useState<saApi.Tenant[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -273,10 +273,9 @@ function SubscriptionsContent() {
 
   const load = () => {
     setLoading(true);
-    saApi.listTenants()
+    saApi.listSubscriptions()
       .then((res) => {
-        const list = Array.isArray(res) ? res : (res as any)?.tenants || [];
-        setTenants(list);
+        setItems(res || []);
       })
       .catch((err) => setError(err.message || "تعذر تحميل طلبات الاشتراكات"))
       .finally(() => setLoading(false));
@@ -324,7 +323,7 @@ function SubscriptionsContent() {
 
       {loading ? (
         <p className="text-center py-12 text-sm text-[#8c8479]">جاري التحميل...</p>
-      ) : tenants.length === 0 ? (
+      ) : items.length === 0 ? (
         <p className="text-center py-12 text-sm text-[#8c8479]">لا توجد طلبات اشتراكات معلقة.</p>
       ) : (
         <div className="bg-[#fffdfa] border border-[#e9e3d9] rounded-2xl overflow-hidden">
@@ -341,28 +340,42 @@ function SubscriptionsContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#eee8df]">
-                {tenants.map((tenant) => (
-                  <tr key={tenant.tenantId} className="hover:bg-[#faf9f6] transition">
-                    <td className="p-3 font-semibold text-[#172433]">{tenant.name}</td>
-                    <td className="p-3">{tenant.subscription?.plan === "trial" ? "فترة تجريبية 30 يوم" : "مميز السنوي"}</td>
-                    <td className="p-3">{tenant.subscription?.price || 0} ج.م</td>
-                    <td className="p-3">{tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString("ar-EG") : "—"}</td>
-                    <td className="p-3">
-                      <Badge className={tenant.subscription?.status === "approved" ? "bg-[#e6f0e5] text-[#5d805a] hover:bg-[#e6f0e5] text-[10px]" : tenant.subscription?.status === "rejected" ? "bg-[#f9e7df] text-[#9b4c32] hover:bg-[#f9e7df] text-[10px]" : "bg-[#f3e9d2] text-[#9b763d] hover:bg-[#f3e9d2] text-[10px]"}>
-                        {tenant.subscription?.status === "approved" ? "مقبول" : tenant.subscription?.status === "rejected" ? "مرفوض" : "بانتظار المراجعة"}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-left space-x-2 space-x-reverse">
-                      {tenant.subscription?.status === "pending" && (
-                        <>
-                          <Button onClick={() => handleApprove(tenant.tenantId)} className="h-7 text-[10px] rounded-lg bg-[#637c5d] hover:bg-[#52684d] text-white">تفعيل</Button>
-                          <Button variant="outline" onClick={() => { setRejectId(tenant.tenantId); setRejectOpen(true); }} className="h-7 text-[10px] rounded-lg border-[#a76040] text-[#a76040] hover:bg-[#fcf3ee]">رفض</Button>
-                        </>
-                      )}
-                      {tenant.subscription?.status !== "pending" && <span className="text-[#8c8479] text-[10px]">مكتمل</span>}
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item) => {
+                  const companyName = item.admin?.companyName || item.admin?.name || "—";
+                  const subId = item.subscription?.id;
+                  return (
+                    <tr key={subId} className="hover:bg-[#faf9f6] transition">
+                      <td className="p-3 font-semibold text-[#172433]">{companyName}</td>
+                      <td className="p-3">
+                        {item.subscription?.plan === "trial" ? "فترة تجريبية 30 يوم" : item.subscription?.plan === "monthly" ? "مميز الشهري" : item.subscription?.plan === "yearly" ? "مميز السنوي" : item.subscription?.plan || "—"}
+                      </td>
+                      <td className="p-3">{item.subscription?.price || 0} ج.م</td>
+                      <td className="p-3">
+                        {item.subscription?.createdAt ? new Date(item.subscription.createdAt).toLocaleDateString("ar-EG") : "—"}
+                      </td>
+                      <td className="p-3">
+                        <Badge className={
+                          item.subscription?.status === "approved"
+                            ? "bg-[#e6f0e5] text-[#5d805a] hover:bg-[#e6f0e5] text-[10px]"
+                            : item.subscription?.status === "rejected"
+                              ? "bg-[#f9e7df] text-[#9b4c32] hover:bg-[#f9e7df] text-[10px]"
+                              : "bg-[#f3e9d2] text-[#9b763d] hover:bg-[#f3e9d2] text-[10px]"
+                        }>
+                          {item.subscription?.status === "approved" ? "مقبول" : item.subscription?.status === "rejected" ? "مرفوض" : "بانتظار المراجعة"}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-left space-x-2 space-x-reverse">
+                        {item.subscription?.status === "pending" && (
+                          <>
+                            <Button onClick={() => handleApprove(subId)} className="h-7 text-[10px] rounded-lg bg-[#637c5d] hover:bg-[#52684d] text-white">تفعيل</Button>
+                            <Button variant="outline" onClick={() => { setRejectId(subId); setRejectOpen(true); }} className="h-7 text-[10px] rounded-lg border-[#a76040] text-[#a76040] hover:bg-[#fcf3ee]">رفض</Button>
+                          </>
+                        )}
+                        {item.subscription?.status !== "pending" && <span className="text-[#8c8479] text-[10px]">مكتمل</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
