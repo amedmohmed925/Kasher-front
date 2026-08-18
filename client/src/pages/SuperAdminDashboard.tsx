@@ -3,15 +3,21 @@
  * center for the platform, not a merchant dashboard; platform-wide scope is explicit.
  */
 import { useEffect, useState } from "react";
-import { Bell, ChevronDown, CircleDollarSign, FileCheck2, LayoutDashboard, LogOut, Menu, PackageSearch, ShieldCheck, Store, Users, X } from "lucide-react";
+import { Bell, ChevronDown, CircleDollarSign, FileCheck2, LayoutDashboard, LogOut, Menu, PackageSearch, ShieldCheck, Store, Users, X, TrendingUp, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { apiGet } from "@/lib/api";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const items = [{ label: "نظرة عامة على النظام", icon: LayoutDashboard }, { label: "التجار والأدمنز", icon: Users }, { label: "الاشتراكات", icon: FileCheck2 }, { label: "منتجات المنصة", icon: PackageSearch }, { label: "فواتير المنصة", icon: FileCheck2 }];
-const cards = [{ label: "إجمالي التجار", value: "—", note: "نشطون على المنصة", icon: Store, tone: "bg-[#f3ded2] text-[#a76040]" }, { label: "إجمالي أرباح المنصة", value: "—", note: "مبيعات التجار", icon: CircleDollarSign, tone: "bg-[#f3e9d2] text-[#9b763d]" }, { label: "منتجات المنصة", value: "—", note: "متوفرة للتداول", icon: PackageSearch, tone: "bg-[#e0e9dc] text-[#637c5d]" }];
+const cards = [
+  { label: "إجمالي التجار", value: "—", note: "نشطون على المنصة", icon: Store, tone: "bg-[#f3ded2] text-[#a76040]" },
+  { label: "حجم مبيعات المنصة (GMV)", value: "—", note: "مبيعات التجار الإجمالية", icon: CircleDollarSign, tone: "bg-[#f3e9d2] text-[#9b763d]" },
+  { label: "أرباح الاشتراكات", value: "—", note: "رسوم تراخيص التشغيل", icon: FileCheck2, tone: "bg-[#e0e9dc] text-[#637c5d]" },
+  { label: "إجمالي منتجات المنصة", value: "—", note: "متوفرة للتداول", icon: PackageSearch, tone: "bg-[#cbd8df] text-[#476173]" }
+];
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth();
@@ -20,14 +26,19 @@ export default function SuperAdminDashboard() {
   const [active, setActive] = useState(items[0].label);
   const [liveCards, setLiveCards] = useState(cards);
   const [pendingSubs, setPendingSubs] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     apiGet<any>("/api/superAdmin/stats")
-      .then((data) => setLiveCards([
-        { ...cards[0], value: String(data.tenantsCount ?? data.usersCount ?? 0), note: "تاجر مسجل" },
-        { ...cards[1], value: `${(data.profits?.[0]?.total || 0).toLocaleString("ar-SA")} ج.م`, note: "أرباح إجمالية" },
-        { ...cards[2], value: `${Array.isArray(data.products) ? data.products.length : 0}`, note: "منتج معروض" }
-      ]))
+      .then((data) => {
+        setStats(data);
+        setLiveCards([
+          { label: "إجمالي التجار", value: String(data.tenantsCount ?? 0), note: "نشطون على المنصة", icon: Store, tone: "bg-[#f3ded2] text-[#a76040]" },
+          { label: "حجم مبيعات المنصة (GMV)", value: `${(data.platformGMV ?? 0).toLocaleString("ar-EG")} ج.م`, note: "مبيعات التجار الإجمالية", icon: CircleDollarSign, tone: "bg-[#f3e9d2] text-[#9b763d]" },
+          { label: "أرباح الاشتراكات", value: `${(data.subscriptionsRevenue ?? 0).toLocaleString("ar-EG")} ج.م`, note: "رسوم تراخيص التشغيل", icon: FileCheck2, tone: "bg-[#e0e9dc] text-[#637c5d]" },
+          { label: "إجمالي منتجات المنصة", value: String(data.productsCount ?? 0), note: "متوفرة للتداول", icon: PackageSearch, tone: "bg-[#cbd8df] text-[#476173]" }
+        ]);
+      })
       .catch(() => undefined);
 
     apiGet<any[]>("/api/superAdmin/subscriptions")
@@ -141,7 +152,7 @@ export default function SuperAdminDashboard() {
             </Button>
           </div>
 
-          <section className="grid gap-4 md:grid-cols-3">
+          <section className="grid gap-4 md:grid-cols-4">
             {liveCards.map((card) => {
               const Icon = card.icon;
               return (
@@ -153,11 +164,153 @@ export default function SuperAdminDashboard() {
                     <span className="text-[11px] font-bold text-[#71836a]">{card.note}</span>
                   </div>
                   <p className="text-sm text-[#888177]">{card.label}</p>
-                  <p className="mt-1 font-display text-[29px] font-bold tracking-[-.04em]">{card.value}</p>
+                  <p className="mt-1 font-display text-[25px] font-bold tracking-[-.04em]">{card.value}</p>
                 </div>
               );
             })}
           </section>
+
+          {/* تحليلات الأداء والتقارير المتقدمة للمنصة */}
+          {stats && (
+            <section className="mt-8 grid gap-7 xl:grid-cols-[1.15fr_.85fr]">
+              {/* منحنى المبيعات الشهري */}
+              <div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa]/80 p-5 shadow-[0_7px_24px_rgba(45,36,25,.035)] md:p-6">
+                <div className="mb-6">
+                  <h3 className="font-display text-lg font-bold">منحنى مبيعات المنصة الإجمالي (GMV)</h3>
+                  <p className="text-xs text-[#999187] mt-0.5">مراقبة نمو حركة المعاملات وحجم المبيعات الشهري للمشتركين</p>
+                </div>
+                <div className="h-72 w-full">
+                  {stats.monthlyTrend && stats.monthlyTrend.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={stats.monthlyTrend} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#b96f4a" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#b96f4a" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                        <XAxis dataKey="period" stroke="#8a8378" style={{ fontSize: "10px" }} />
+                        <YAxis stroke="#8a8378" style={{ fontSize: "10px" }} />
+                        <Tooltip 
+                          contentStyle={{ background: "#fffdfa", border: "1px solid #e9e3d9", borderRadius: "12px", direction: "rtl" }}
+                          labelFormatter={(label) => `الفترة: ${label}`}
+                          formatter={(value: any) => [`${value.toLocaleString()} ج.م`, "المبيعات"]}
+                        />
+                        <Area type="monotone" dataKey="sales" stroke="#b96f4a" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSales)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-[#8c8479] italic">لا توجد بيانات كافية لرسم المنحنى البياني للـ GMV.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* توزيع خطط الاشتراكات */}
+              <div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa]/80 p-5 shadow-[0_7px_24px_rgba(45,36,25,.035)] md:p-6">
+                <div className="mb-6">
+                  <h3 className="font-display text-lg font-bold">توزيع اشتراكات التجار</h3>
+                  <p className="text-xs text-[#999187] mt-0.5">تقسيم المشتركين بالمنصة حسب الباقات والرسوم المحصلة</p>
+                </div>
+                <div className="space-y-4">
+                  {stats.subscriptionPlans && stats.subscriptionPlans.length > 0 ? (
+                    stats.subscriptionPlans.map((plan: any, idx: number) => {
+                      const planLabel = plan.plan === "trial" ? "الفترة التجريبية (30 يوم)" : plan.plan === "monthly" ? "الاشتراك الشهري المميز" : plan.plan === "yearly" ? "الاشتراك السنوي المميز" : plan.plan;
+                      return (
+                        <div key={idx} className="rounded-xl border border-[#ede7dd] bg-[#faf7f1] p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-bold text-[#172433]">{planLabel}</span>
+                            <Badge className="bg-[#cbd8df] text-[#476173] text-[10px]">{plan.count} تاجر</Badge>
+                          </div>
+                          <div className="flex justify-between items-center text-[11px] text-[#8c8479]">
+                            <span>إجمالي المبالغ المحصلة</span>
+                            <span className="font-bold text-[#b96f4a]">{plan.totalCollected.toLocaleString()} ج.م</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-12 text-xs text-[#8c8479] italic">لا توجد إحصائيات باقات نشطة حالياً.</div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* التجار والمنتجات الأكثر مبيعاً */}
+          {stats && (
+            <section className="mt-7 grid gap-7 xl:grid-cols-2">
+              {/* التجار الأكثر مبيعاً */}
+              <div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa]/80 p-5 shadow-[0_7px_24px_rgba(45,36,25,.035)] md:p-6">
+                <div className="mb-5">
+                  <h3 className="font-display text-base font-bold">المتاجر الأكثر نشاطاً ومبيعاً</h3>
+                  <p className="text-xs text-[#999187] mt-0.5">ترتيب التجار الخمسة الأوائل حسب إجمالي حجم المبيعات الإجمالية</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-[#faf7f1] text-[#716960] font-bold border-b border-[#e9e3d9]">
+                      <tr>
+                        <th className="p-3">اسم المتجر</th>
+                        <th className="p-3">البريد الإلكتروني</th>
+                        <th className="p-3">الفواتير</th>
+                        <th className="p-3 text-left">إجمالي المبيعات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#eee8df]">
+                      {stats.topMerchants && stats.topMerchants.length > 0 ? (
+                        stats.topMerchants.map((merchant: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-[#faf9f6] transition">
+                            <td className="p-3 font-semibold text-[#172433]">{merchant.companyName || "—"}</td>
+                            <td className="p-3 text-[#77736f]">{merchant.email}</td>
+                            <td className="p-3">{merchant.invoicesCount} فاتورة</td>
+                            <td className="p-3 text-left text-[#b96f4a] font-bold">{merchant.totalSales.toLocaleString()} ج.م</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="text-center py-8 text-xs text-[#8c8479] italic">لا توجد بيانات مبيعات للتجار حتى الآن.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* المنتجات الأكثر مبيعاً */}
+              <div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa]/80 p-5 shadow-[0_7px_24px_rgba(45,36,25,.035)] md:p-6">
+                <div className="mb-5">
+                  <h3 className="font-display text-base font-bold">المنتجات الأكثر مبيعاً على المنصة</h3>
+                  <p className="text-xs text-[#999187] mt-0.5">أفضل السلع والمنتجات تداولاً ومبيعاً عبر جميع المتاجر المشتركة</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-[#faf7f1] text-[#716960] font-bold border-b border-[#e9e3d9]">
+                      <tr>
+                        <th className="p-3">اسم المنتج</th>
+                        <th className="p-3">الكمية المباعة</th>
+                        <th className="p-3 text-left">العائد الإجمالي</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#eee8df]">
+                      {stats.topProducts && stats.topProducts.length > 0 ? (
+                        stats.topProducts.map((product: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-[#faf9f6] transition">
+                            <td className="p-3 font-semibold text-[#172433]">{product.name}</td>
+                            <td className="p-3 text-[#77736f]">{product.totalQuantity} وحدة</td>
+                            <td className="p-3 text-left text-[#637c5d] font-bold">{product.totalRevenue.toLocaleString()} ج.m</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="text-center py-8 text-xs text-[#8c8479] italic">لا توجد بيانات مبيعات منتجات متوفرة.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="mt-7 grid gap-7 xl:grid-cols-[1.15fr_.85fr]">
             <div className="rounded-2xl border border-[#e9e3d9] bg-[#fffdfa]/80 p-5 shadow-[0_7px_24px_rgba(45,36,25,.035)] md:p-6">
