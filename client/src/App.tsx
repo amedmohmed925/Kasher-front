@@ -49,7 +49,6 @@ function Router() {
     <Route path="/super-admin/subscriptions"><Guard role="superAdmin"><SuperAdminSection section="subscriptions" /></Guard></Route>
     <Route path="/super-admin/products"><Guard role="superAdmin"><SuperAdminSection section="products" /></Guard></Route>
     <Route path="/super-admin/invoices"><Guard role="superAdmin"><SuperAdminSection section="invoices" /></Guard></Route>
-    <Route path="/super-admin/notifications"><Guard role="superAdmin"><SuperAdminSection section="notifications" /></Guard></Route>
     <Route path="/"><Redirect to="/login" /></Route>
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />

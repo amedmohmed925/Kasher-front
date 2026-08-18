@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { apiGet } from "@/lib/api";
 
-const items = [{ label: "نظرة عامة على النظام", icon: LayoutDashboard }, { label: "التجار والأدمنز", icon: Users }, { label: "الاشتراكات", icon: FileCheck2 }, { label: "منتجات المنصة", icon: PackageSearch }, { label: "فواتير المنصة", icon: FileCheck2 }, { label: "الإشعارات", icon: Bell }];
+const items = [{ label: "نظرة عامة على النظام", icon: LayoutDashboard }, { label: "التجار والأدمنز", icon: Users }, { label: "الاشتراكات", icon: FileCheck2 }, { label: "منتجات المنصة", icon: PackageSearch }, { label: "فواتير المنصة", icon: FileCheck2 }];
 const cards = [{ label: "إجمالي التجار", value: "—", note: "نشطون على المنصة", icon: Store, tone: "bg-[#f3ded2] text-[#a76040]" }, { label: "إجمالي أرباح المنصة", value: "—", note: "مبيعات التجار", icon: CircleDollarSign, tone: "bg-[#f3e9d2] text-[#9b763d]" }, { label: "منتجات المنصة", value: "—", note: "متوفرة للتداول", icon: PackageSearch, tone: "bg-[#e0e9dc] text-[#637c5d]" }];
 
 export default function SuperAdminDashboard() {
@@ -45,8 +45,7 @@ export default function SuperAdminDashboard() {
       "التجار والأدمنز": "/super-admin/traders",
       "الاشتراكات": "/super-admin/subscriptions",
       "منتجات المنصة": "/super-admin/products",
-      "فواتير المنصة": "/super-admin/invoices",
-      "الإشعارات": "/super-admin/notifications"
+      "فواتير المنصة": "/super-admin/invoices"
     };
     if (routes[label]) navigate(routes[label]);
   };
