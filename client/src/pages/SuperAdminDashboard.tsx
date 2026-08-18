@@ -32,8 +32,8 @@ export default function SuperAdminDashboard() {
 
     apiGet<any[]>("/api/superAdmin/subscriptions")
       .then((data) => {
-        const pending = (data || []).filter((item: any) => item.subscription?.status === "pending").slice(0, 5);
-        setPendingSubs(pending);
+        const recent = (data || []).slice(0, 5);
+        setPendingSubs(recent);
       })
       .catch(() => undefined);
   }, []);
@@ -171,12 +171,13 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="space-y-3">
                 {pendingSubs.length === 0 ? (
-                  <p className="text-center py-12 text-xs text-[#999187] italic">لا توجد طلبات اشتراك معلقة بانتظار المراجعة.</p>
+                  <p className="text-center py-12 text-xs text-[#999187] italic">لا توجد طلبات اشتراك مسجلة حالياً.</p>
                 ) : (
                   pendingSubs.map((item) => {
                     const name = item.admin?.companyName || item.admin?.name || "تاجر جديد";
                     const plan = item.subscription?.plan === "trial" ? "تجريبي 30 يوم" : item.subscription?.plan === "monthly" ? "شهري مميز" : item.subscription?.plan === "yearly" ? "سنوي مميز" : item.subscription?.plan || "غير محدد";
                     const date = item.subscription?.createdAt ? new Date(item.subscription.createdAt).toLocaleDateString("ar-EG") : "";
+                    const status = item.subscription?.status;
                     return (
                       <div key={item.subscription?.id} className="flex items-center gap-3 rounded-xl bg-[#faf7f1] p-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f0dfd5] text-xs font-bold text-[#a76040]">{name[0] || "S"}</div>
@@ -184,7 +185,15 @@ export default function SuperAdminDashboard() {
                           <p className="truncate text-sm font-bold">{name}</p>
                           <p className="text-[10px] text-[#a19a90]">خطة: {plan} · تاريخ التقديم: {date}</p>
                         </div>
-                        <Badge className="bg-[#f3e9d2] text-[10px] text-[#9b763d] hover:bg-[#f3e9d2]">قيد المراجعة</Badge>
+                        <Badge className={
+                          status === "approved"
+                            ? "bg-[#e6f0e5] text-[#5d805a] hover:bg-[#e6f0e5] text-[10px]"
+                            : status === "rejected"
+                              ? "bg-[#f9e7df] text-[#9b4c32] hover:bg-[#f9e7df] text-[10px]"
+                              : "bg-[#f3e9d2] text-[#9b763d] hover:bg-[#f3e9d2] text-[10px]"
+                        }>
+                          {status === "approved" ? "مقبول" : status === "rejected" ? "مرفوض" : "قيد المراجعة"}
+                        </Badge>
                       </div>
                     );
                   })
