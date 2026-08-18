@@ -107,3 +107,14 @@ export const getSuperAdminStats = () => apiGet<SuperAdminStats>("/api/superAdmin
 export const getTenantsStats = () => apiGet<any[]>("/api/superAdmin/tenants-stats");
 
 export const getGlobalReports = () => apiGet<GlobalReport[]>("/api/superAdmin/reports/global");
+
+export const listSubscriptions = () => apiGet<any[]>("/api/superAdmin/subscriptions");
+
+export const listPlatformProducts = (params: { adminId?: string; categoryId?: string; page?: number; limit?: number; minPrice?: number; maxPrice?: number } = {}) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") query.set(key, String(value));
+  });
+  const qStr = query.toString();
+  return apiGet<any>(`/api/superAdmin/products${qStr ? `?${qStr}` : ""}`);
+};

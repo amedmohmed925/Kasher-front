@@ -406,9 +406,10 @@ function PlatformProductsContent() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    saApi.getSuperAdminStats()
+    saApi.listPlatformProducts({ limit: 100 })
       .then((res) => {
-        setProducts(res.products || []);
+        const list = Array.isArray(res) ? res : (res as any)?.products || [];
+        setProducts(list);
       })
       .catch((err) => setError(err.message || "تعذر تحميل قائمة المنتجات"))
       .finally(() => setLoading(false));
@@ -448,22 +449,25 @@ function PlatformProductsContent() {
               <thead className="bg-[#faf7f1] text-[#716960] font-bold border-b border-[#e9e3d9]">
                 <tr>
                   <th className="p-3">اسم المنتج</th>
-                  <th className="p-3">رمز SKU</th>
+                  <th className="p-3">رمز SKU / باركود</th>
                   <th className="p-3">سعر الشراء</th>
                   <th className="p-3">سعر البيع</th>
-                  <th className="p-3 text-left">معرّف التاجر</th>
+                  <th className="p-3 text-left">اسم المتجر</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#eee8df]">
-                {filtered.map((product, idx) => (
-                  <tr key={idx} className="hover:bg-[#faf9f6] transition">
-                    <td className="p-3 font-semibold text-[#172433]">{product.name}</td>
-                    <td className="p-3 text-[#77736f]">{product.barcode || product.sku}</td>
-                    <td className="p-3">{product.originalPrice} ج.م</td>
-                    <td className="p-3 text-[#b96f4a] font-bold">{product.sellingPrice} ج.م</td>
-                    <td className="p-3 text-left text-[#8c8479] font-mono">{product.tenantId}</td>
-                  </tr>
-                ))}
+                {filtered.map((product, idx) => {
+                  const companyName = product.adminId?.companyName || "—";
+                  return (
+                    <tr key={idx} className="hover:bg-[#faf9f6] transition">
+                      <td className="p-3 font-semibold text-[#172433]">{product.name}</td>
+                      <td className="p-3 text-[#77736f]">{product.barcode || product.sku}</td>
+                      <td className="p-3">{product.originalPrice} ج.م</td>
+                      <td className="p-3 text-[#b96f4a] font-bold">{product.sellingPrice} ج.م</td>
+                      <td className="p-3 text-left text-[#8c8479] font-semibold">{companyName}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
