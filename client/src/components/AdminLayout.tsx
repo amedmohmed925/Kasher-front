@@ -45,6 +45,7 @@ export default function AdminLayout({
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -175,24 +176,51 @@ export default function AdminLayout({
           </div>
 
           <div className="flex items-center gap-2 md:gap-5">
-            <button
-              className="relative rounded-xl p-2.5 text-[#777169] transition hover:bg-[#f0ebe3]"
-              aria-label="الإشعارات"
-            >
-              <Bell size={19} />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#b96f4a]" />
-            </button>
-            <div className="hidden h-7 w-px bg-[#e5dfd5] md:block" />
-            <button className="flex items-center gap-2 rounded-xl p-1.5 pl-2 transition hover:bg-[#f0ebe3]">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e9d2c4] text-sm font-bold text-[#8f4e34]">
-                {(user?.companyName || user?.firstName || "م")[0]}
-              </div>
-              <div className="hidden text-right md:block">
-                <p className="text-xs font-bold">{user?.companyName || "متجر المذاق"}</p>
-                <p className="text-[10px] text-[#999187]">الفرع الرئيسي</p>
-              </div>
-              <ChevronDown size={15} className="text-[#948d82]" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center gap-2 rounded-xl p-1.5 pl-2 transition hover:bg-[#f0ebe3]"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e9d2c4] text-sm font-bold text-[#8f4e34]">
+                  {(user?.companyName || user?.firstName || "م")[0]}
+                </div>
+                <div className="hidden text-right md:block">
+                  <p className="text-xs font-bold">{user?.companyName || "متجر المذاق"}</p>
+                  <p className="text-[10px] text-[#999187]">الفرع الرئيسي</p>
+                </div>
+                <ChevronDown size={15} className={`text-[#948d82] transition-transform duration-200 ${profileMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {profileMenuOpen && (
+                <>
+                  {/* Backdrop click outside container */}
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                  <div className="absolute left-0 mt-2 w-48 rounded-xl border border-[#e9e3d9] bg-[#fffdfa] py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <button
+                      onClick={() => {
+                        navigate("/admin/profile");
+                        setProfileMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-right text-xs text-[#172433] hover:bg-[#f5f2eb] font-semibold transition"
+                    >
+                      <UserRound size={14} className="text-[#8a8378]" />
+                      <span>الملف الشخصي</span>
+                    </button>
+                    <div className="h-px bg-[#e9e3d9] my-1" />
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setProfileMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-right text-xs text-[#9b5540] hover:bg-[#fcf3ee] font-bold transition"
+                    >
+                      <LogOut size={14} />
+                      <span>تسجيل الخروج</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
